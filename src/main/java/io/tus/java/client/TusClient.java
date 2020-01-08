@@ -122,7 +122,7 @@ public class TusClient {
      * prefix, and can cause unexpected behavior.
      *
      * @see #getHeaders()
-     * @see #prepareConnection(HttpURLConnection)
+     * @see #prepareConnection(URL)
      *
      * @param headers The map of HTTP headers
      */
@@ -135,7 +135,7 @@ public class TusClient {
      * {@link #setHeaders(Map)}.
      *
      * @see #setHeaders(Map)
-     * @see #prepareConnection(HttpURLConnection)
+     * @see #prepareConnection(URL)
      *
      * @return The map of configured HTTP headers
      */
@@ -166,9 +166,8 @@ public class TusClient {
      * @throws IOException Thrown if an exception occurs while issuing the HTTP request.
      */
     public TusUploader createUpload(@NotNull TusUpload upload) throws ProtocolException, IOException {
-        HttpURLConnection connection = (HttpURLConnection) uploadCreationURL.openConnection();
+        HttpURLConnection connection = prepareConnection(uploadCreationURL);
         connection.setRequestMethod("POST");
-        prepareConnection(connection);
 
         String encodedMetadata = upload.getEncodedMetadata();
         if(encodedMetadata.length() > 0) {
@@ -248,9 +247,8 @@ public class TusClient {
      * @throws IOException Thrown if an exception occurs while issuing the HTTP request.
      */
     public TusUploader beginOrResumeUploadFromURL(@NotNull TusUpload upload, @NotNull URL uploadURL) throws ProtocolException, IOException {
-        HttpURLConnection connection = (HttpURLConnection) uploadURL.openConnection();
+        HttpURLConnection connection = prepareConnection(uploadURL);
         connection.setRequestMethod("HEAD");
-        prepareConnection(connection);
 
         connection.connect();
 
@@ -301,9 +299,11 @@ public class TusClient {
      * Set headers used for every HTTP request. Currently, this will add the Tus-Resumable header
      * and any custom header which can be configured using {@link #setHeaders(Map)},
      *
-     * @param connection The connection whose headers will be modified.
+     * @param uploadURL The URL for which to prepare a connection.
      */
-    public void prepareConnection(@NotNull HttpURLConnection connection) {
+    public HttpURLConnection prepareConnection(@NotNull URL uploadURL) throws IOException {
+        HttpURLConnection connection = (HttpURLConnection) uploadURL.openConnection();
+
         // Only follow redirects, if the POST methods is preserved. If http.strictPostRedirect is
         // disabled, a POST request will be transformed into a GET request which is not wanted by us.
         // See: http://grepcode.com/file/repository.grepcode.com/java/root/jdk/openjdk/7u40-b43/sun/net/www/protocol/http/HttpURLConnection.java#2372
@@ -317,6 +317,7 @@ public class TusClient {
                 connection.addRequestProperty(entry.getKey(), entry.getValue());
             }
         }
+        return connection;
     }
 
     /**
